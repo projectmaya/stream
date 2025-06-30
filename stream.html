@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAYA - Live Stream</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Orbitron:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-violet: #8A2BE2;--primary-violet-dark: #6A0DAD;--primary-violet-light: #9F5FEF;--background-body: #0F0B1C;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100%; width: 100%; overflow: hidden; font-family: 'Poppins', sans-serif; background: var(--background-body); }
+        
+        #videoFeed {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; z-index: 1; transition: opacity 0.5s ease;
+        }
+        #videoFeed.hidden { opacity: 0; }
+
+        .stream-controls {
+            position: fixed;
+            bottom: 3vh;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            padding: 12px;
+            background-color: rgba(40, 40, 40, 0.4);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            backdrop-filter: blur(25px) saturate(180%);
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            z-index: 10;
+        }
+
+        .stream-controls button {
+            background-color: rgba(118, 118, 128, 0.24);
+            border: none;
+            color: white;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            font-size: 1.4rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.3s ease;
+        }
+        .stream-controls button:hover {
+            background-color: rgba(118, 118, 128, 0.4);
+        }
+        .stream-controls button:active { transform: scale(0.95); }
+
+        #exitStreamBtn { background-color: #ff453a; }
+        #exitStreamBtn:hover { background-color: #ff6b61; }
+
+        .stream-controls button.active { background-color: rgba(255, 255, 255, 0.9); color: #000; }
+        .stream-controls button.active:hover { background-color: rgba(255, 255, 255, 1); }
+
+        .stream-controls button.listening {
+            animation: pulse-mic 1.5s infinite ease-in-out;
+            box-shadow: 0 0 15px rgba(30, 255, 150, 0.7);
+        }
+        .stream-controls button.speaking {
+            animation: pulse-tts 1.5s infinite ease-in-out;
+            box-shadow: 0 0 15px rgba(138, 43, 226, 0.7);
+        }
+
+        @keyframes pulse-mic { 0% { box-shadow: 0 0 0 0 rgba(30,255,150,0.5); } 70% { box-shadow: 0 0 0 10px rgba(30,255,150,0); } 100% { box-shadow: 0 0 0 0 rgba(30,255,150,0); } }
+        @keyframes pulse-tts { 0% { box-shadow: 0 0 0 0 rgba(138,43,226,0.5); } 70% { box-shadow: 0 0 0 10px rgba(138,43,226,0); } 100% { box-shadow: 0 0 0 0 rgba(138,43,226,0); } }
+
+        .history-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 100%;
+            background: rgba(30, 30, 30, 0.55); /* more transparent */
+            backdrop-filter: blur(10px);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+        }
+        .history-header {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(30, 30, 30, 0.25); /* transparent header */
+        }
+        .history-header span {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: white;
+        }
+        .history-header button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.3rem;
+            cursor: pointer;
+        }
+        #newChatBtn {
+            margin: 10px 15px 0 15px;
+            padding: 10px 0;
+            width: calc(100% - 30px);
+            background: linear-gradient(135deg,rgba(138,43,226,0.45),rgba(106,13,173,0.45)); /* transparent gradient */
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: none;
+            transition: background 0.2s;
+        }
+        #newChatBtn:hover {
+            background: linear-gradient(135deg,rgba(138,43,226,0.7),rgba(106,13,173,0.7));
+        }
+        .history-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex: 1;
+            overflow-y: auto;
+        }
+        .history-list li {
+            padding: 10px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .history-list li:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .history-footer {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #aaa;
+            text-align: center;
+            padding: 10px;
+        }
+        .history-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 100;
+        }
+
+    </style>
+</head>
+<body>
+    <video id="videoFeed" autoplay playsinline muted></video>
+    
+    <div class="stream-controls">
+        <button id="toggleMicBtn" aria-label="Toggle Microphone"><i class="fas fa-microphone"></i></button>
+        <button id="toggleVideoBtn" aria-label="Toggle Video"><i class="fas fa-video"></i></button>
+        <button id="toggleTtsBtn" aria-label="Toggle Text-to-Speech"><i class="fas fa-volume-up"></i></button>
+        <button id="exitStreamBtn" aria-label="Exit Stream"><i class="fas fa-times"></i></button>
+        <button id="historyMenuBtn" aria-label="Open History" style="background:rgba(138,43,226,0.15);"><i class="fas fa-ellipsis-h"></i></button>
+    </div>
+
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <div class="history-panel" id="historyPanel" style="display:none;">
+        <div class="history-header">
+            <span style="font-weight:600;font-size:1.1rem;">Chat History</span>
+            <button id="closeHistoryBtn" style="background:none;border:none;color:white;font-size:1.3rem;float:right;cursor:pointer;"><i class="fas fa-times"></i></button>
+        </div>
+        <button id="newChatBtn" style="margin:10px 15px 0 15px;padding:10px 0;width:calc(100% - 30px);background:linear-gradient(135deg,#8A2BE2,#6A0DAD);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;">+ Start New Chat</button>
+        <ul class="history-list" id="historyList" style="list-style:none;padding:0;margin:0;max-height:60vh;overflow-y:auto;"></ul>
+        <div class="history-footer" style="margin-top:10px;font-size:0.9rem;color:#aaa;text-align:center;">Click a conversation to continue</div>
+    </div>
+    <div class="history-overlay" id="historyOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:100;"></div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const API_BASE_URL = 'https://backend-main-f27dbff.kuberns.cloud';
+        
+        const ui = {
+            videoFeed: document.getElementById('videoFeed'),
+            canvas: document.getElementById('canvas'),
+            toggleMicBtn: document.getElementById('toggleMicBtn'),
+            toggleVideoBtn: document.getElementById('toggleVideoBtn'),
+            toggleTtsBtn: document.getElementById('toggleTtsBtn'),
+            exitStreamBtn: document.getElementById('exitStreamBtn'),
+            historyMenuBtn: document.getElementById('historyMenuBtn'),
+            historyPanel: document.getElementById('historyPanel'),
+            closeHistoryBtn: document.getElementById('closeHistoryBtn'),
+            historyList: document.getElementById('historyList'),
+            historyOverlay: document.getElementById('historyOverlay')
+        };
+
+        const state = {
+            username: null,
+            conversationId: `stream-${Date.now()}`,
+            stream: null,
+            isMicOn: false,
+            isVideoOn: true,
+            isTtsOn: true,
+            isRecognizing: false,
+            isSpeaking: false,
+            isAwaitingResponse: false
+        };
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = SpeechRecognition ? new SpeechRecognition() : null;
+        const synthesis = window.speechSynthesis;
+
+        // --- Initialization ---
+        function init() {
+            state.username = localStorage.getItem('loggedInUserMAYA');
+            if (!state.username) {
+                window.location.href = 'loader.html?target=login.html';
+                return;
+            }
+            if (!recognition || !synthesis) {
+                alert("Your browser does not support the required Speech APIs. Please use a modern version of Chrome or Firefox.");
+                return;
+            }
+            
+            setupSpeechRecognition();
+            addEventListeners();
+            startCamera();
+            updateButtonStates();
+        }
+
+        function setupSpeechRecognition() {
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => { state.isRecognizing = true; updateButtonStates(); };
+            recognition.onend = () => {
+                state.isRecognizing = false;
+                updateButtonStates();
+                // If the mic is supposed to be on, and we're not waiting for the AI, listen again
+                if (state.isMicOn && !state.isAwaitingResponse) {
+                    try { recognition.start(); } catch(e) {}
+                }
+            };
+            recognition.onresult = handleRecognitionResult;
+        }
+
+        function renderHistoryPanel(show) {
+            const panel = document.getElementById('historyPanel');
+            const overlay = document.getElementById('historyOverlay');
+            panel.style.display = show ? 'block' : 'none';
+            overlay.style.display = show ? 'block' : 'none';
+        }
+
+        async function loadUserHistory() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = '<li style="padding:12px;color:#aaa;">Loading...</li>';
+            try {
+                const r = await fetch(`${API_BASE_URL}/history/${state.username}`);
+                const c = await r.json();
+                list.innerHTML = '';
+                if (!c.length) {
+                    list.innerHTML = '<li style="padding:12px;color:#aaa;">No history found.</li>';
+                    return;
+                }
+                c.forEach(conv => {
+                    const li = document.createElement('li');
+                    li.className = 'history-item';
+                    li.style = 'padding:12px 15px;cursor:pointer;border-bottom:1px solid #222;color:#eee;';
+                    li.textContent = conv.title || conv.id;
+                    li.onclick = () => selectConversation(conv.id, conv.title);
+                    if (state.conversationId === conv.id) li.style.background = 'rgba(138,43,226,0.15)';
+                    list.appendChild(li);
+                });
+            } catch {
+                list.innerHTML = '<li style="padding:12px;color:#aaa;">Failed to load history.</li>';
+            }
+        }
+
+        async function selectConversation(id, title) {
+            state.conversationId = id;
+            renderHistoryPanel(false);
+            // Optionally show a toast or highlight
+            // Load the last conversation's context if needed
+        }
+
+        async function loadConversation(id, title) {
+            const panel = document.getElementById('historyPanel');
+            let chatDiv = document.getElementById('historyChatView');
+            if (!chatDiv) {
+                chatDiv = document.createElement('div');
+                chatDiv.id = 'historyChatView';
+                chatDiv.style = 'background:#18122b;padding:12px 10px 12px 10px;margin-top:10px;border-radius:8px;max-height:30vh;overflow-y:auto;font-size:0.97rem;';
+                panel.appendChild(chatDiv);
+            }
+            chatDiv.innerHTML = `<div style='font-weight:600;margin-bottom:6px;'>${title || id}</div>`;
+            try {
+                const r = await fetch(`${API_BASE_URL}/history/${state.username}/${id}`);
+                const m = await r.json();
+                m.forEach(msg => {
+                    if (msg.user) chatDiv.innerHTML += `<div style='color:#8A2BE2;margin-bottom:4px;'><b>You:</b> ${msg.user}</div>`;
+                    if (msg.text_ai) chatDiv.innerHTML += `<div style='color:#fff;margin-bottom:8px;'><b>MAYA:</b> ${msg.text_ai}</div>`;
+                });
+            } catch {
+                chatDiv.innerHTML += '<div style="color:#aaa;">Failed to load messages.</div>';
+            }
+        }
+
+        function addEventListeners() {
+            ui.toggleMicBtn.onclick = toggleMic;
+            ui.toggleVideoBtn.onclick = toggleVideo;
+            ui.toggleTtsBtn.onclick = toggleTts;
+            ui.exitStreamBtn.onclick = exitStream;
+            ui.historyMenuBtn.onclick = () => {
+                renderHistoryPanel(true);
+                loadUserHistory();
+            };
+            ui.closeHistoryBtn.onclick = () => renderHistoryPanel(false);
+            ui.historyOverlay.onclick = () => renderHistoryPanel(false);
+            document.getElementById('newChatBtn').onclick = () => {
+                state.conversationId = `stream-${Date.now()}`;
+                renderHistoryPanel(false);
+            };
+        }
+
+        async function startCamera() {
+            const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+            const constraints = {
+                video: { facingMode: isMobile ? { exact: "environment" } : "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+                audio: false // We use SpeechRecognition API for audio input
+            };
+            try {
+                state.stream = await navigator.mediaDevices.getUserMedia(constraints);
+            } catch (err) {
+                if (isMobile) { // Fallback for mobile if environment camera fails
+                    try {
+                        constraints.video.facingMode = "user";
+                        state.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    } catch (fallbackErr) {
+                        alert("Could not access camera. Please check permissions and refresh.");
+                    }
+                } else {
+                    alert("Could not access camera. Please check permissions and refresh.");
+                }
+            }
+            if (state.stream) {
+                ui.videoFeed.srcObject = state.stream;
+            }
+        }
+
+        // --- Control Logic ---
+        function toggleMic() {
+            state.isMicOn = !state.isMicOn;
+            if (state.isMicOn) {
+                try { recognition.start(); } catch(e) { console.error("Recognition start failed", e); state.isMicOn = false; }
+            } else {
+                recognition.stop();
+            }
+            updateButtonStates();
+        }
+
+        function toggleVideo() {
+            state.isVideoOn = !state.isVideoOn;
+            state.stream.getVideoTracks().forEach(track => track.enabled = state.isVideoOn);
+            updateButtonStates();
+        }
+
+        function toggleTts() {
+            state.isTtsOn = !state.isTtsOn;
+            if (!state.isTtsOn) synthesis.cancel();
+            updateButtonStates();
+        }
+
+        function exitStream() {
+            if (state.stream) state.stream.getTracks().forEach(track => track.stop());
+            if (recognition) recognition.stop();
+            if (synthesis) synthesis.cancel();
+            window.location.href = 'loader.html?target=chat.html';
+        }
+
+        function updateButtonStates() {
+            // Mic
+            ui.toggleMicBtn.classList.toggle('active', state.isMicOn);
+            ui.toggleMicBtn.classList.toggle('listening', state.isRecognizing);
+            ui.toggleMicBtn.innerHTML = state.isMicOn ? '<i class="fas fa-microphone"></i>' : '<i class="fas fa-microphone-slash"></i>';
+            // Video
+            ui.toggleVideoBtn.classList.toggle('active', state.isVideoOn);
+            ui.videoFeed.classList.toggle('hidden', !state.isVideoOn);
+            ui.toggleVideoBtn.innerHTML = state.isVideoOn ? '<i class="fas fa-video"></i>' : '<i class="fas fa-video-slash"></i>';
+            // TTS
+            ui.toggleTtsBtn.classList.toggle('active', state.isTtsOn);
+            ui.toggleTtsBtn.classList.toggle('speaking', state.isSpeaking);
+            ui.toggleTtsBtn.innerHTML = state.isTtsOn ? '<i class="fas fa-volume-up"></i>' : '<i class="fas fa-volume-mute"></i>';
+        }
+
+        // --- Core AI Interaction ---
+        function handleRecognitionResult(event) {
+            const transcript = event.results[event.results.length - 1][0].transcript.trim();
+            if (transcript) {
+                state.isAwaitingResponse = true;
+                sendToAI(transcript);
+            }
+        }
+
+        function captureImageBase64() {
+            if (!state.stream || !state.isVideoOn) return null;
+            const video = ui.videoFeed;
+            const canvas = ui.canvas;
+            const width = video.videoWidth;
+            const height = video.videoHeight;
+            if (!width || !height) return null;
+            
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, width, height);
+            return canvas.toDataURL('image/jpeg').split(',')[1];
+        }
+
+        async function sendToAI(text) {
+            const imageData = captureImageBase64();
+            try {
+                const response = await fetch(`${API_BASE_URL}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: state.username,
+                        conversation_id: state.conversationId,
+                        message: text,
+                        image_data: imageData
+                    })
+                });
+
+                if (!response.body) throw new Error('Response body is missing.');
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullText = '';
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    fullText += decoder.decode(value, { stream: true });
+                }
+
+                if (state.isTtsOn && fullText) {
+                    speak(fullText);
+                } else {
+                     // If TTS is off, we can just start listening again.
+                    state.isAwaitingResponse = false;
+                    if(state.isMicOn) try { recognition.start() } catch(e){}
+                }
+
+            } catch (error) {
+                console.error('Error during AI chat:', error);
+                if (state.isTtsOn) speak("I'm sorry, I encountered an error. Please try again.");
+                state.isAwaitingResponse = false;
+                 if(state.isMicOn) try { recognition.start() } catch(e){}
+            }
+        }
+        
+        function speak(text) {
+            if (!synthesis || !text) return;
+
+            synthesis.cancel(); // Cancel any previous speech
+
+            // Select a female English voice
+            let voices = synthesis.getVoices();
+            // If voices are not loaded yet, try to load them
+            if (!voices.length) {
+                synthesis.onvoiceschanged = () => speak(text);
+                return;
+            }
+            // Try to find a female English voice
+            let selectedVoice = voices.find(v =>
+                v.lang.toLowerCase().startsWith('en') &&
+                v.name.toLowerCase().includes('female')
+            );
+            // If not found, pick any English voice that sounds female by name
+            if (!selectedVoice) {
+                selectedVoice = voices.find(v =>
+                    v.lang.toLowerCase().startsWith('en') &&
+                    (v.name.toLowerCase().includes('woman') || v.name.toLowerCase().includes('girl') || v.name.toLowerCase().includes('susan') || v.name.toLowerCase().includes('emma') || v.name.toLowerCase().includes('linda') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('amy') || v.name.toLowerCase().includes('female'))
+                );
+            }
+            // If still not found, pick any English voice
+            if (!selectedVoice) {
+                selectedVoice = voices.find(v => v.lang.toLowerCase().startsWith('en'));
+            }
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            if (selectedVoice) utterance.voice = selectedVoice;
+            utterance.pitch = 1.2; // High pitch for female voice
+            utterance.onstart = () => {
+                state.isSpeaking = true;
+                updateButtonStates();
+            };
+            utterance.onend = () => {
+                state.isSpeaking = false;
+                state.isAwaitingResponse = false;
+                updateButtonStates();
+                // If the mic is still supposed to be on, start listening again
+                if (state.isMicOn) {
+                    try { recognition.start(); } catch(e){}
+                }
+            };
+            utterance.onerror = () => {
+                 state.isSpeaking = false;
+                 state.isAwaitingResponse = false;
+                 updateButtonStates();
+            }
+
+            synthesis.speak(utterance);
+        }
+
+        init();
+    });
+    </script>
+</body>
+</html>
