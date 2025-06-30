@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=100%, initial-scale=2.0">
+    <title>Awakening MAYA...</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400&family=Orbitron:wght@900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-violet: #8A2BE2;
+            --primary-violet-light: #9F5FEF;
+            --background-body: #0F0B1C;
+            --text-light: #E0E0FF;
+            --text-meta: #A0A0C0;
+            --glow-color: rgba(159, 95, 239, 0.75);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--background-body);
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 1;
+            transition: opacity 0.5s ease-out; /* For smooth fade-out */
+        }
+        
+        /* The fade-out class, applied via JS */
+        body.is-loaded {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loader-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .maya-logo-container {
+            width: 150px;
+            height: 150px;
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        #maya-svg {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* --- STAGE 1: Drawing the Neural Network --- */
+        #maya-network {
+            stroke: var(--primary-violet-light);
+            stroke-width: 2;
+            fill: transparent;
+            /* The magic trick: create a dash pattern as long as the line itself */
+            stroke-dasharray: 600; 
+            stroke-dashoffset: 600;
+            animation: draw-network 2.5s ease-in-out 0.5s forwards;
+        }
+
+        /* --- STAGE 2: Filling the Core with Energy --- */
+        #maya-core {
+            fill: var(--primary-violet-light);
+            stroke: var(--primary-violet-light);
+            stroke-width: 2;
+            opacity: 0;
+            transform-origin: center;
+            /* Add a subtle glow filter */
+            filter: drop-shadow(0 0 10px var(--glow-color));
+            animation: fill-core 1.5s ease-in 2.5s forwards;
+        }
+
+        .loader-status-text {
+            color: var(--text-meta);
+            font-size: 1rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            height: 20px; /* Reserve space to prevent layout shift */
+        }
+        
+        .status-message {
+            opacity: 0;
+            animation: fadeInOut 2s ease-in-out forwards;
+        }
+        
+        /* Keyframe Animations */
+        
+        /* This animates the 'stroke-dashoffset' from the full line length to 0, "drawing" the line. */
+        @keyframes draw-network {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+        
+        /* This fades in and subtly scales up the core logo for an 'awakening' effect */
+        @keyframes fill-core {
+            0% {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            70% {
+                opacity: 1;
+                transform: scale(1.1);
+                filter: drop-shadow(0 0 25px var(--glow-color)) drop-shadow(0 0 10px var(--glow-color));
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+                filter: drop-shadow(0 0 15px var(--glow-color));
+            }
+        }
+
+        /* Simple fade in/out for our status text messages */
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(10px); }
+            20% { opacity: 1; transform: translateY(0); }
+            80% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-10px); }
+        }
+
+    </style>
+</head>
+<body class="is-loading">
+    
+    <div class="loader-wrapper">
+        <div class="maya-logo-container">
+            <svg id="maya-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                <!-- A complex path that looks like a stylized 'M' or neural map.
+                     I've measured its length to be approx 600 for the animation. -->
+                <path id="maya-network" d="M10 90 L30 50 L50 70 L70 50 L90 90"></path>
+                <!-- This is the simplified core logo that will be revealed at the end. 
+                     It uses the same points but is a filled shape. -->
+                <path id="maya-core" d="M10 90 L30 50 L50 70 L70 50 L90 90 L70 90 L50 80 L30 90 Z"></path>
+            </svg>
+        </div>
+        <p class="loader-status-text" id="loader-status-text"></p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const statusTextElement = document.getElementById('loader-status-text');
+            const messages = [
+                "Establishing Neural Pathways...", // 0s - 2s
+                "Calibrating Core Logic...",      // 2s - 4s
+                "Awakening..."                    // 4s onwards
+            ];
+
+            let messageIndex = 0;
+            
+            // Function to display messages sequentially
+            const showMessage = () => {
+                if (messageIndex < messages.length) {
+                    statusTextElement.innerHTML = `<span class="status-message">${messages[messageIndex]}</span>`;
+                    messageIndex++;
+                }
+            };
+            
+            // Show the first message immediately
+            showMessage(); 
+            // Schedule the subsequent messages to match the animation timeline
+            setTimeout(showMessage, 2000); // Fired at 2s mark
+            setTimeout(showMessage, 4000); // Fired at 4s mark
+
+            // --- THE CRITICAL UX IMPROVEMENT ---
+            // Don't use a fake delay. Wait for the next page to be fully loaded.
+            window.addEventListener('load', () => {
+                const body = document.body;
+
+                // This logic ensures the animation has a minimum time to be appreciated
+                // but doesn't artificially block the user if loading is fast.
+                const minimumDisplayTime = 4500; // Total animation time is about 4s.
+                const timeElapsed = Date.now() - performance.timing.navigationStart;
+                const remainingTime = Math.max(0, minimumDisplayTime - timeElapsed);
+
+                setTimeout(() => {
+                    // 1. Add the 'is-loaded' class to fade out the loader body.
+                    body.classList.add('is-loaded');
+
+                    // 2. After the fade-out transition is complete, redirect.
+                    body.addEventListener('transitionend', () => {
+                        const params = new URLSearchParams(window.location.search);
+                        const targetPage = params.get('target') || 'index.html'; // Fallback to index.html
+                        window.location.href = targetPage;
+                    }, { once: true }); // Ensure the event listener only runs once.
+
+                }, remainingTime);
+            });
+        });
+    </script>
+</body>
+</html>
