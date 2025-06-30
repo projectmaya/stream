@@ -216,7 +216,7 @@
         function init() {
             state.username = localStorage.getItem('loggedInUserMAYA');
             if (!state.username) {
-                window.location.href = 'https://mayaui.netlify.app/loader?target=login.html';
+                window.location.href = 'loader?target=login.html';
                 return;
             }
             if (!recognition || !synthesis) {
