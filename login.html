@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAYA Gateway</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Orbitron:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Violet Gradient Palette */
+            --primary-violet: #8A2BE2;
+            --primary-violet-dark: #6A0DAD;
+            --primary-violet-light: #9F5FEF;
+            --violet-gradient-start: #7A0DC7;
+            --violet-gradient-end: #5E00A3;
+            
+            /* Background & Surface Colors */
+            --background-body-start: #0a0912;
+            --background-body-end: #06050A;
+            --surface-glass: rgba(30, 25, 55, 0.6);
+            --surface-border: rgba(255, 255, 255, 0.07);
+            
+            /* Text & Input Colors */
+            --text-light: #E0E0FF;
+            --text-meta: #A0A0C0;
+            --input-background: rgba(15, 11, 28, 0.5);
+            --input-placeholder-color: #777c89;
+            
+            /* Feedback Colors */
+            --error-text-color: #ff6b6b;
+            --success-text-color: #28c76f;
+
+            /* Animations */
+            --anim-duration-fast: 0.25s;
+            --anim-duration-medium: 0.4s;
+            --anim-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: radial-gradient(ellipse at center, var(--background-body-start) 0%, var(--background-body-end) 100%);
+            color: var(--text-light); 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden; 
+        }
+
+        .particles {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1; pointer-events: none;
+        }
+        .particle {
+            position: absolute; border-radius: 50%;
+            background: rgba(138, 43, 226, 0.5);
+            animation: float 15s infinite ease-in-out;
+        }
+        @keyframes float { 0% { transform: translateY(0) translateX(0) rotate(0); } 50% { transform: translateY(-20px) translateX(20px) rotate(180deg); } 100% { transform: translateY(0) translateX(0) rotate(360deg); } }
+
+        .login-card {
+            width: 100%;
+            max-width: 420px; 
+            background: var(--surface-glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--surface-border);
+            padding: 45px 40px; 
+            border-radius: 24px; 
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            opacity: 0;
+            transform: scale(0.97) translateY(15px);
+            animation: fadeInScaleUpLoginCard 0.5s var(--anim-ease-out) 0.2s forwards;
+        }
+
+        .login-logo-container { margin-bottom: 20px; opacity: 0; animation: fadeInSlideUpLoginElement 0.5s var(--anim-ease-out) 0.4s forwards; }
+        .login-logo { 
+            font-family: 'Orbitron', sans-serif; font-size: 2.8em; font-weight: 800; 
+            text-transform: uppercase; letter-spacing: 1px; 
+            background: linear-gradient(135deg, var(--primary-violet-light), var(--primary-violet));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .login-heading { 
+            font-size: 1.8em; font-weight: 500; color: var(--text-light); 
+            margin-bottom: 30px; opacity: 0; 
+            animation: fadeInSlideUpLoginElement 0.5s var(--anim-ease-out) 0.5s forwards; 
+        }
+
+        .form-group {
+            margin-bottom: 24px; 
+            text-align: left;
+            opacity: 0;
+            animation: fadeInSlideUpLoginElement 0.5s var(--anim-ease-out) forwards;
+            position: relative; 
+        }
+        .form-group:nth-of-type(1) { animation-delay: 0.6s; } 
+        .form-group:nth-of-type(2) { animation-delay: 0.7s; } 
+
+        .form-group label { display: block; font-size: 0.9em; margin-bottom: 8px; color: var(--text-meta); font-weight: 500; }
+        .form-group input { 
+            width: 100%; padding: 14px 20px; 
+            padding-right: 50px;
+            background: var(--input-background); 
+            border: 1px solid var(--surface-border); 
+            border-radius: 12px; 
+            color: var(--text-light); 
+            font-size: 1rem; 
+            transition: border-color 0.2s ease, box-shadow 0.2s ease; 
+        }
+        .form-group input::placeholder { color: var(--input-placeholder-color); }
+        .form-group input:focus { 
+            outline: none; 
+            border-color: rgba(138, 43, 226, 0.4);
+            box-shadow: 0 0 0 3px rgba(138, 43, 226, 0.2);
+        }
+        .form-group input.error {
+            border-color: var(--error-text-color) !important;
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.2) !important;
+        }
+        
+        .password-toggle {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            right: 5px;
+            margin-top: calc((0.9em + 8px) / 2); /* Adjust for label height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px; height: 40px;
+            background: none; border: none; cursor: pointer;
+            padding: 0;
+        }
+        .password-toggle svg {
+            width: 20px; height: 20px;
+            fill: var(--text-meta);
+            transition: fill var(--anim-duration-fast) var(--anim-ease-out);
+        }
+        .password-toggle:hover svg, .password-toggle:focus svg { fill: var(--primary-violet-light); }
+        .password-toggle:focus { outline: none; }
+        .password-toggle:focus-visible svg { outline: 2px dashed var(--primary-violet-light); outline-offset: 1px; border-radius: 2px; }
+        
+        .login-error-message {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--error-text-color); font-size: 0.9em; 
+            margin-bottom: 15px; min-height: 1.2em; text-align: left; 
+            opacity: 0; transition: opacity var(--anim-duration-fast) var(--anim-ease-out);
+        }
+        .login-error-message.show { opacity: 1; }
+
+        .form-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85em;
+            margin-bottom: 25px;
+            opacity: 0;
+            animation: fadeInSlideUpLoginElement 0.5s var(--anim-ease-out) 0.8s forwards;
+        }
+        .remember-me { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .remember-me input { display: none; }
+        .remember-me .checkbox {
+            width: 18px; height: 18px;
+            border: 2px solid var(--text-meta);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        .remember-me .checkbox i { font-size: 12px; color: white; opacity: 0; transform: scale(0.5); transition: all 0.2s ease; }
+        .remember-me input:checked + .checkbox {
+            background-color: var(--primary-violet);
+            border-color: var(--primary-violet);
+        }
+        .remember-me input:checked + .checkbox i { opacity: 1; transform: scale(1); }
+        .forgot-password { color: var(--text-meta); text-decoration: none; transition: color 0.2s ease; }
+        .forgot-password:hover { color: var(--primary-violet-light); text-decoration: underline; }
+
+        .login-button {
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; padding: 14px 20px; font-size: 1.05em; font-weight: 600; 
+            color: white; 
+            background: linear-gradient(90deg, var(--violet-gradient-start), var(--violet-gradient-end)); 
+            border: none; border-radius: 12px; cursor: pointer; 
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease; 
+            margin-top: 10px; opacity: 0; 
+            animation: fadeInSlideUpLoginElement 0.5s var(--anim-ease-out) 0.9s forwards; 
+            min-height: 50px;
+        }
+        .login-button:hover:not(:disabled), .login-button:focus:not(:disabled) { 
+            transform: translateY(-3px); 
+            box-shadow: 0 8px 25px rgba(106, 13, 173, 0.6);
+            outline: none; 
+        }
+        .login-button:active:not(:disabled) { transform: translateY(0) scale(0.98); box-shadow: none; }
+        .login-button:disabled { background: #444; cursor: not-allowed; }
+        .login-button .spinner {
+            display: none; width: 20px; height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        .login-button.loading .button-text { display: none; }
+        .login-button.loading .spinner { display: block; }
+        .login-button.success { background: var(--success-text-color); }
+        .login-button.failure { background: var(--error-text-color); }
+
+        .back-to-home-link { 
+            display: inline-block; font-size: 0.9em; color: var(--text-meta); 
+            text-decoration: none; margin-top: 30px; 
+            transition: color 0.2s ease, transform 0.2s ease; 
+            opacity: 0; animation: fadeInSlideUpLoginElement 0.5s var(--anim-ease-out) 1s forwards; 
+        }
+        .back-to-home-link:hover, .back-to-home-link:focus { color: var(--primary-violet-light); transform: translateY(-1px); }
+        .back-to-home-link .arrow { margin-right: 5px; display: inline-block; transition: transform 0.2s ease-out; }
+        .back-to-home-link:hover .arrow { transform: translateX(-3px); }
+
+        @keyframes fadeInScaleUpLoginCard { to { opacity: 1; transform: scale(1) translateY(0); } }
+        @keyframes fadeInSlideUpLoginElement { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; transition-delay: 0ms !important; scroll-behavior: auto !important; } }
+        @media (max-width: 480px) { .login-card { padding: 35px 25px; max-width: 100%; margin: 0; border-radius: 0; height: 100%; backdrop-filter: none; background: var(--background-body-start); } .login-logo { font-size: 2.2em; } .login-heading { font-size: 1.5em; } }
+
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+
+    <div class="login-card">
+        <div class="login-logo-container">
+            <div class="login-logo">MAYA</div>
+        </div>
+        <h1 class="login-heading">Welcome Back</h1>
+        <form id="loginForm"> 
+            <div id="loginErrorMessage" class="login-error-message"></div>
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Enter your username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="••••••••" required>
+                <button type="button" class="password-toggle" id="passwordToggle" aria-label="Show password">
+                    <svg viewBox="0 0 24 24" id="icon-eye"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                    <svg viewBox="0 0 24 24" id="icon-eye-slash" style="display:none;"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.44-4.75C21.27 7.61 17 4.5 12 4.5c-1.6 0-3.14.35-4.54.96l1.51 1.51C9.74 7.13 10.35 7 11 7c.35 0 .69.04 1 .11L12 7zm0 10c-2.76 0-5-2.24-5-5 0-.65.13-1.26.36-1.83L4.46 7.25C3.27 8.48 2.39 9.97 1.96 11.14 1.73 11.58 1.5 12 1.5 12c1.73 4.39 6 7.5 10.5 7.5 1.6 0 3.14-.35 4.54-.96L14.49 16.5C13.74 16.87 12.88 17 12 17zm-1.04-5.54L15.5 15.5c.03-.16.04-.32.04-.48 0-1.66-1.34-3-3-3-.16 0-.32.01-.48.04L9.96 11.46zM2.39 4.73L1.11 3.46l-.7.7L3.33 7.08l1.42 1.42L6.17 10l1.42 1.41L9 12.83l1.42 1.41L11.83 15.67l1.41 1.41L14.66 18.5l1.42 1.42L18.92 22.7l.7-.7-1.27-1.28-1.42-1.42L15.5 18.5l-1.41-1.41L12.67 15.67l-1.41-1.41L9.83 12.83 8.41 11.41 7 10l-1.42-1.42L4.17 7.08 2.39 4.73z"/></svg>
+                </button>
+            </div>
+            <div class="form-options">
+                <label class="remember-me">
+                    <input type="checkbox" id="rememberMe">
+                    <span class="checkbox"><i class="fas fa-check"></i></span>
+                    Remember Me
+                </label>
+                <a href="#" class="forgot-password">Forgot Password?</a>
+            </div>
+            <button type="submit" class="login-button" id="loginButton">
+                <span class="button-text">Log In</span>
+                <div class="spinner"></div>
+            </button>
+        </form>
+        <a href="loader.html?target=index.html" class="back-to-home-link"><span class="arrow">←</span> Back to Home</a>
+    </div>
+
+    <script>
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            if (!particlesContainer) return;
+            const particleCount = 20;
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                const size = Math.random() * 20 + 5;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.top = `${Math.random() * 100}%`;
+                particle.style.opacity = Math.random() * 0.3 + 0.1;
+                particle.style.animationDelay = `${Math.random() * 15}s`;
+                particlesContainer.appendChild(particle);
+            }
+        }
+        createParticles();
+
+        const loginForm = document.getElementById('loginForm');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const passwordToggle = document.getElementById('passwordToggle');
+        const iconEye = document.getElementById('icon-eye');
+        const iconEyeSlash = document.getElementById('icon-eye-slash');
+        const errorMessageDiv = document.getElementById('loginErrorMessage');
+        const loginButton = document.getElementById('loginButton');
+
+        passwordToggle.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            iconEye.style.display = type === 'password' ? 'block' : 'none';
+            iconEyeSlash.style.display = type === 'password' ? 'none' : 'block';
+            this.setAttribute('aria-label', type === 'password' ? 'Show password' : 'Hide password');
+        });
+
+        const setButtonState = (state) => {
+            loginButton.classList.remove('loading', 'success', 'failure');
+            const buttonText = loginButton.querySelector('.button-text');
+            
+            switch(state) {
+                case 'loading':
+                    loginButton.classList.add('loading');
+                    loginButton.disabled = true;
+                    break;
+                case 'success':
+                    loginButton.classList.add('success');
+                    buttonText.innerHTML = '<i class="fas fa-check"></i> Success!';
+                    break;
+                case 'failure':
+                    loginButton.classList.add('failure');
+                    buttonText.innerHTML = '<i class="fas fa-times"></i> Failed';
+                    setTimeout(() => setButtonState('idle'), 2000);
+                    break;
+                case 'idle':
+                default:
+                    buttonText.textContent = 'Log In';
+                    loginButton.disabled = false;
+                    break;
+            }
+        };
+
+        loginForm.addEventListener('submit', function(event) { 
+            event.preventDefault(); 
+            setButtonState('loading');
+
+            // Clear previous errors
+            errorMessageDiv.innerHTML = ''; 
+            errorMessageDiv.classList.remove('show');
+            usernameInput.classList.remove('error'); 
+            passwordInput.classList.remove('error');
+
+            const enteredUsername = usernameInput.value.trim();
+            const enteredPassword = passwordInput.value;
+
+            fetch('https://backend-main-f27dbff.kuberns.cloud/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: enteredUsername, password: enteredPassword })
+            })
+            .then(async response => {
+                if (response.ok) {
+                    const data = await response.json();
+                    setButtonState('success');
+                    localStorage.setItem('isLoggedInMAYA', 'true');
+                    localStorage.setItem('loggedInUserMAYA', data.displayName);
+                    setTimeout(() => {
+                        window.location.href = 'loader.html?target=index.html'; 
+                    }, 1000);
+                } else {
+                    setButtonState('failure');
+                    errorMessageDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> Invalid username or password.`;
+                    errorMessageDiv.classList.add('show');
+                    usernameInput.classList.add('error');
+                    passwordInput.classList.add('error');
+                    passwordInput.value = ''; 
+                    usernameInput.focus();
+                }
+            })
+            .catch(() => {
+                setButtonState('failure');
+                errorMessageDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> Server error. Please try again later.`;
+                errorMessageDiv.classList.add('show');
+            });
+        });
+    </script>
+
+</body>
+</html>
